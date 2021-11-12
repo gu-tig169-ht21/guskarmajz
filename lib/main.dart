@@ -11,24 +11,95 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'TIG169 TODO',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.grey,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(),
     );
   }
 }
 
+class MyHomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('TIG169 TODO'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Container(
+            //color: Colors.amber,
+            //width: double.infinity,
+            //height: 48.0,
+            child: Column(
+          children: [
+            // fixa nycklar till parametrarna kanske?
+            TodoObject('Write a book', false),
+            TodoObject('Do homework', false),
+            TodoObject('Tidy room', true),
+            TodoObject('Watch TV', false),
+            TodoObject('Nap', false),
+            TodoObject('Shop groceries', false),
+            TodoObject('Have fun', false),
+            TodoObject('Meditate', false),
+          ],
+        )),
+      ),
+    );
+  }
+}
+
+// Ett todo-objekt
+Container TodoObject(String TodoText, bool Completed) {
+  return Container(
+    width: double.infinity,
+    height: 72,
+    decoration: TodoBorder(),
+    child: Row(
+      children: [
+        CheckBox(Completed),
+        Text(TodoText,
+            style: (Completed)
+                ? TextStyle(decoration: TextDecoration.lineThrough)
+                : null),
+        Spacer(),
+        TrashCan()
+      ],
+    ),
+  );
+}
+
+// Checkboxen till todo-objektet TodoObject
+Container CheckBox(bool Completed) {
+  return Container(
+    width: 72,
+    child: Center(
+      child: Checkbox(
+        value: Completed,
+        onChanged: null,
+      ),
+    ),
+  );
+}
+
+// Papperskorg till todo-objektet
+Container TrashCan() {
+  return Container(
+    width: 72,
+    child: Center(
+      child: Text("Delete"),
+    ),
+  );
+}
+
+BoxDecoration TodoBorder() {
+  return const BoxDecoration(
+      border: Border(bottom: BorderSide(width: 1.0, color: Colors.grey)));
+}
+
+ /*
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key, required this.title}) : super(key: key);
 
@@ -113,3 +184,4 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+*/
