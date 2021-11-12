@@ -61,6 +61,7 @@ Container TodoObject(String TodoText, bool Completed) {
       children: [
         CheckBox(Completed),
         Text(TodoText,
+            // borde kanske brytas ut till en egen funktion med if-sats istället
             style: (Completed)
                 ? TextStyle(decoration: TextDecoration.lineThrough)
                 : null),
