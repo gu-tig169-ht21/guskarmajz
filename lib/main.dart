@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+//import 'package:provider/provider.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -15,14 +17,32 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.grey,
       ),
-      home: MyHomePage(),
+      home: TodoPage(),
       debugShowCheckedModeBanner: false, // ful och äcklig, bort med dig
     );
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class TodoPage extends StatefulWidget {
   @override
+  State<StatefulWidget> createState() {
+    return TodoPageState();
+  }
+}
+
+class TodoPageState extends State<StatefulWidget> {
+  int _counter = 0;
+  List<TodoObject> todoObjects = [
+    TodoObject('Write a book', false),
+    TodoObject('Do homework', false),
+    TodoObject('Tidy room', true),
+    TodoObject('Watch TV', false),
+    TodoObject('Nap', false),
+    TodoObject('Shop groceries', false),
+    TodoObject('Have fun', false),
+    TodoObject('Meditate', false),
+  ];
+
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -43,21 +63,20 @@ class MyHomePage extends StatelessWidget {
             child: Column(
           children: [
             // fixa nycklar till parametrarna kanske?
-            todoObject('Write a book', false),
-            todoObject('Do homework', false),
-            todoObject('Tidy room', true),
-            todoObject('Watch TV', false),
-            todoObject('Nap', false),
-            todoObject('Shop groceries', false),
-            todoObject('Have fun', false),
-            todoObject('Meditate', false),
+            for (var todoTile in todoObjects)
+              TodoWidget(todoTile.todoText, todoTile.completed, todoTile),
+
+            Text('$_counter'),
           ],
         )),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => AddTaskScreen()));
+          //Navigator.push(context,
+          //    MaterialPageRoute(builder: (context) => AddTaskScreen()));
+          setState(() {
+            ++_counter;
+          });
         },
         child: const Icon(Icons.add),
         backgroundColor: Colors.grey,
@@ -97,34 +116,67 @@ class AddTaskScreen extends StatelessWidget {
 }
 
 // Ett todo-objekt
-Container todoObject(String TodoText, bool Completed) {
-  return Container(
-    width: double.infinity,
-    height: 72,
-    decoration: todoBorder(),
-    child: Row(
-      children: [
-        checkBox(Completed),
-        Text(TodoText,
-            // borde kanske brytas ut till en egen funktion med if-sats istället
-            style: (Completed)
-                ? TextStyle(decoration: TextDecoration.lineThrough)
-                : null),
-        Spacer(),
-        trashCan()
-      ],
-    ),
-  );
+class TodoObject {
+  String todoText;
+  bool completed;
+
+  TodoObject(this.todoText, this.completed);
+}
+
+// En todo-widget
+class TodoWidget extends StatelessWidget {
+  final String todoText;
+  final bool completed;
+  TodoObject todoObject;
+
+  TodoWidget(this.todoText, this.completed, this.todoObject);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 72,
+      decoration: todoBorder(),
+      child: Row(
+        children: [
+          Container(
+            width: 72,
+            child: Center(
+              child: Checkbox(
+                value: completed,
+                onChanged: (finished) {
+                  if (finished != null) {
+                    todoObject.completed = finished;
+                  }
+                },
+              ),
+            ),
+          ),
+          Text(todoText,
+              // borde kanske brytas ut till en egen funktion med if-sats istället
+              style: (completed)
+                  ? TextStyle(decoration: TextDecoration.lineThrough)
+                  : null),
+          Spacer(),
+          trashCan()
+        ],
+      ),
+    );
+  }
 }
 
 // Checkboxen till todo-objektet todoObject
-Container checkBox(bool Completed) {
+Container checkBox(bool completed, TodoObject myParent) {
   return Container(
     width: 72,
     child: Center(
       child: Checkbox(
-        value: Completed,
-        onChanged: null,
+        value: completed,
+        onChanged: (finished) {
+          if (finished != null) {
+            myParent.completed = finished;
+          }
+        },
       ),
     ),
   );
