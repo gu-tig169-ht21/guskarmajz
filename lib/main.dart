@@ -1,13 +1,18 @@
+import 'dart:js';
+
 import 'package:flutter/material.dart';
+
+import 'package:provider/provider.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
+// ber om ursäkt till vem det än är som behöver läsa igenom denna tågkrasch :)
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -15,58 +20,128 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.grey,
       ),
-      home: MyHomePage(),
+      home: TodoPage(),
       debugShowCheckedModeBanner: false, // ful och äcklig, bort med dig
     );
   }
 }
 
-class MyHomePage extends StatelessWidget {
-  @override
+class TodoState extends ChangeNotifier {
+  List<TodoObject> todoObjects = [];
+  // om man gör bool till nullable kan den tekniskt sett ha 3 värden
+  // säkert jätteharam men det skiter jag i :)
+  // null = visa alla, true = visa klara, false = visa icke klara
+  bool? filterMode;
+
+  TodoState() {
+    todoObjects = [
+      TodoObject('Write a book', false),
+      TodoObject('Do homework', false),
+      TodoObject('Tidy room', true),
+      TodoObject('Watch TV', false),
+      TodoObject('Nap', false),
+      TodoObject('Shop groceries', false),
+      TodoObject('Have fun', false),
+      TodoObject('Meditate', false),
+    ];
+  }
+
+  void addTodo(String todoText) {
+    todoObjects.add(TodoObject(todoText, false));
+    notifyListeners();
+  }
+
+  void removeTodo(String todoText) {
+    // tar bort alla objekt med samma namn, oj då!
+    todoObjects.removeWhere((todo) => todo.todoText == todoText);
+    notifyListeners();
+  }
+
+  void updateTodo() {
+    notifyListeners();
+  }
+
+  void updateFilter(bool? newFilter) {
+    filterMode = newFilter;
+    notifyListeners();
+  }
+}
+
+class TodoPage extends StatelessWidget {
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('TIG169 TODO'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: null,
-            icon: Icon(Icons.more_vert),
-          )
-        ],
-      ),
-      body: Center(
-        child: Container(
-            //color: Colors.amber,
-            //width: double.infinity,
-            //height: 48.0,
-            child: Column(
-          children: [
-            // fixa nycklar till parametrarna kanske?
-            todoObject('Write a book', false),
-            todoObject('Do homework', false),
-            todoObject('Tidy room', true),
-            todoObject('Watch TV', false),
-            todoObject('Nap', false),
-            todoObject('Shop groceries', false),
-            todoObject('Have fun', false),
-            todoObject('Meditate', false),
+    return ChangeNotifierProvider(
+      create: (context) => TodoState(),
+      builder: (context, child) => Scaffold(
+        appBar: AppBar(
+          title: Text('TIG169 TODO'),
+          centerTitle: true,
+          actions: [
+            PopupMenuButton(itemBuilder: (_) {
+              TodoState todoState =
+                  Provider.of<TodoState>(context, listen: false);
+              return <PopupMenuItem>[
+                PopupMenuItem(
+                  child: Text('Done'),
+                  onTap: () => todoState.updateFilter(true),
+                ),
+                PopupMenuItem(
+                  child: Text('Not done'),
+                  onTap: () => todoState.updateFilter(false),
+                ),
+                PopupMenuItem(
+                  child: Text('All'),
+                  onTap: () => todoState.updateFilter(null),
+                ),
+              ];
+            }),
           ],
-        )),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => AddTaskScreen()));
-        },
-        child: const Icon(Icons.add),
-        backgroundColor: Colors.grey,
+        ),
+        body: Center(
+          child: Container(
+              //color: Colors.amber,
+              //width: double.infinity,
+              //height: 48.0,
+              child: Consumer<TodoState>(
+            builder: (context, state, child) => Column(
+              children: [
+                // filterfunktion, väldigt cringe
+                for (var todoTile in state.todoObjects)
+                  if (state.filterMode == null)
+                    TodoWidget(todoTile.todoText, todoTile.completed, todoTile)
+                  else if (state.filterMode == todoTile.completed)
+                    TodoWidget(todoTile.todoText, todoTile.completed, todoTile),
+              ],
+            ),
+          )),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            TodoState theTodoState = Provider.of<TodoState>(
+              context,
+              listen: false,
+            );
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                // provider som parameter, känns ultra-haram
+                builder: (context) => AddTaskScreen(theTodoState),
+              ),
+            );
+          },
+          child: const Icon(Icons.add),
+          backgroundColor: Colors.grey,
+        ),
       ),
     );
   }
 }
 
 class AddTaskScreen extends StatelessWidget {
+  String _todoText = '';
+  final TodoState _todoState;
+
+  AddTaskScreen(this._todoState);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,10 +158,18 @@ class AddTaskScreen extends StatelessWidget {
                 border: UnderlineInputBorder(),
                 hintText: 'New TODO',
               ),
+              onChanged: (text) {
+                _todoText = text;
+              },
             ),
           ),
           TextButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              if (_todoText != '') {
+                _todoState.addTodo(_todoText);
+                Navigator.pop(context);
+              }
+            },
             icon: Icon(Icons.add, size: 18),
             label: Text("Add TODO"),
           )
@@ -97,45 +180,88 @@ class AddTaskScreen extends StatelessWidget {
 }
 
 // Ett todo-objekt
-Container todoObject(String TodoText, bool Completed) {
-  return Container(
-    width: double.infinity,
-    height: 72,
-    decoration: todoBorder(),
-    child: Row(
-      children: [
-        checkBox(Completed),
-        Text(TodoText,
-            // borde kanske brytas ut till en egen funktion med if-sats istället
-            style: (Completed)
-                ? TextStyle(decoration: TextDecoration.lineThrough)
-                : null),
-        Spacer(),
-        trashCan()
-      ],
-    ),
-  );
+class TodoObject {
+  String todoText;
+  bool completed;
+
+  TodoObject(this.todoText, this.completed);
+}
+
+// En todo-widget
+class TodoWidget extends StatelessWidget {
+  final String todoText;
+  final bool completed;
+  TodoObject todoObject;
+
+  TodoWidget(this.todoText, this.completed, this.todoObject);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<TodoState>(
+      builder: (context, state, child) {
+        return Container(
+          width: double.infinity,
+          height: 72,
+          decoration: todoBorder(),
+          child: Row(
+            children: [
+              Container(
+                width: 72,
+                child: Center(
+                  child: Checkbox(
+                    value: completed,
+                    onChanged: (finished) {
+                      if (finished != null) {
+                        // är todoObject en referensvariabel??!?
+                        // jag vet inte vad som händer, men dart gör tydligen det, så...
+                        todoObject.completed = finished;
+                        state.updateTodo();
+                      }
+                    },
+                  ),
+                ),
+              ),
+              Text(todoText,
+                  // borde kanske brytas ut till en egen funktion med if-sats istället
+                  style: (completed)
+                      ? TextStyle(decoration: TextDecoration.lineThrough)
+                      : null),
+              Spacer(),
+              trashCan(state, todoText)
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 // Checkboxen till todo-objektet todoObject
-Container checkBox(bool Completed) {
+Container checkBox(bool completed, TodoObject myParent) {
   return Container(
     width: 72,
     child: Center(
       child: Checkbox(
-        value: Completed,
-        onChanged: null,
+        value: completed,
+        onChanged: (finished) {
+          if (finished != null) {
+            myParent.completed = finished;
+          }
+        },
       ),
     ),
   );
 }
 
 // Papperskorg till todo-objektet
-Container trashCan() {
+Container trashCan(TodoState state, String todoText) {
   return Container(
     width: 72,
     child: Center(
-      child: Text("Delete"),
+      child: IconButton(
+        icon: Icon(Icons.delete),
+        onPressed: () => state.removeTodo(todoText),
+      ),
     ),
   );
 }
