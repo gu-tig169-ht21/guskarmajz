@@ -1,11 +1,36 @@
-import 'dart:js';
+//import 'dart:js'; //????
+
+//import 'dart:html';
+
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
 
+import 'package:http/http.dart' as http;
+
 void main() {
   runApp(const MyApp());
+
+  //getTodos();
+}
+
+// testfunktion
+Future<void> getTodos() async {
+  const String apiKey = '?key=47a3ee96-cd50-4bac-9f54-e2c6719e7c65';
+  const String apiServer = 'https://todoapp-api-pyq5q.ondigitalocean.app/todos';
+
+  var object = {"id": "", "title": "hello", "done": false};
+
+  var body = jsonEncode(object);
+
+  var response = await http.post(Uri.parse('$apiServer$apiKey'),
+      headers: {"Content-Type": "application/json"}, body: body);
+  http.Response todoList = await http.get(Uri.parse('$apiServer$apiKey'));
+  var list = jsonDecode(todoList.body);
+  print(list);
+  print('stuff');
 }
 
 // ber om ursäkt till vem det än är som behöver läsa igenom denna tågkrasch :)
@@ -32,32 +57,26 @@ class TodoState extends ChangeNotifier {
   // säkert jätteharam men det skiter jag i :)
   // null = visa alla, true = visa klara, false = visa icke klara
   bool? filterMode;
+  HTTPHandler httpHandler = HTTPHandler();
 
   TodoState() {
-    todoObjects = [
-      TodoObject('Write a book', false),
-      TodoObject('Do homework', false),
-      TodoObject('Tidy room', true),
-      TodoObject('Watch TV', false),
-      TodoObject('Nap', false),
-      TodoObject('Shop groceries', false),
-      TodoObject('Have fun', false),
-      TodoObject('Meditate', false),
-    ];
+    updateTodo();
   }
 
   void addTodo(String todoText) {
-    todoObjects.add(TodoObject(todoText, false));
+    //httpHandler.addTodo(todoText);
+    //todoObjects.add(TodoObject(todoText, false));
     notifyListeners();
   }
 
-  void removeTodo(String todoText) {
-    // tar bort alla objekt med samma namn, oj då!
-    todoObjects.removeWhere((todo) => todo.todoText == todoText);
+  void removeTodo(TodoObject todoObject) {
+    todoObjects.remove(todoObject);
     notifyListeners();
   }
 
   void updateTodo() {
+    Future<Map<String, dynamic>> todoListJson = httpHandler.getTodos();
+    List<TodoObject> todoList = List<TodoObject>.from(todoListJson)
     notifyListeners();
   }
 
@@ -181,10 +200,15 @@ class AddTaskScreen extends StatelessWidget {
 
 // Ett todo-objekt
 class TodoObject {
+  String todoID;
   String todoText;
   bool completed;
 
-  TodoObject(this.todoText, this.completed);
+  TodoObject(this.todoID, this.todoText, this.completed);
+
+  factory TodoObject.fromJson(Map<String, dynamic> json) {
+    return TodoObject(json['id'], json['title'], json['done']);
+  }
 }
 
 // En todo-widget
@@ -227,7 +251,7 @@ class TodoWidget extends StatelessWidget {
                       ? TextStyle(decoration: TextDecoration.lineThrough)
                       : null),
               Spacer(),
-              trashCan(state, todoText)
+              trashCan(state, todoObject)
             ],
           ),
         );
@@ -254,13 +278,13 @@ Container checkBox(bool completed, TodoObject myParent) {
 }
 
 // Papperskorg till todo-objektet
-Container trashCan(TodoState state, String todoText) {
+Container trashCan(TodoState state, TodoObject todoObject) {
   return Container(
     width: 72,
     child: Center(
       child: IconButton(
         icon: Icon(Icons.delete),
-        onPressed: () => state.removeTodo(todoText),
+        onPressed: () => state.removeTodo(todoObject),
       ),
     ),
   );
@@ -273,3 +297,31 @@ BoxDecoration todoBorder() {
     ),
   );
 }
+
+class HTTPHandler {
+  // 47a3ee96-cd50-4bac-9f54-e2c6719e7c65
+  final String apiKey = '?key=47a3ee96-cd50-4bac-9f54-e2c6719e7c65';
+  final String apiServer = 'https://todoapp-api-pyq5q.ondigitalocean.app/todos';
+
+  Future<Map<String, dynamic>> getTodos() async {
+    http.Response response = await http.get(Uri.parse('$apiServer$apiKey'));
+    Map<String, dynamic> todoList = jsonDecode(response.body);
+    return todoList;
+  }
+
+  void addTodo(String todoText) {
+    http.post(Uri.parse('$apiServer$apiKey'), body: "");
+  }
+
+  void updateTodo(TodoObject todoObject) {}
+
+  void deleteTodo(TodoObject todoObject) {}
+}
+
+/*
+{
+  "id": "ca3084de-4424-4421-98af-0ae9e2cb3ee5",
+  "title": "Must pack bags",
+  "done": false
+}
+*/
