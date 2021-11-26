@@ -33,7 +33,7 @@ Future<void> getTodos() async {
   print('stuff');
 }
 
-// ber om ursäkt till vem det än är som behöver läsa igenom denna tågkrasch :)
+// koden lika stökig som lägenheten haahaahahahahahahahaa 🤣🤣🤣🤣🤣🤣
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -64,20 +64,27 @@ class TodoState extends ChangeNotifier {
   }
 
   void addTodo(String todoText) {
-    //httpHandler.addTodo(todoText);
-    //todoObjects.add(TodoObject(todoText, false));
-    notifyListeners();
+    httpHandler.addTodo(todoText).then((_) => updateTodo());
   }
 
   void removeTodo(TodoObject todoObject) {
-    todoObjects.remove(todoObject);
-    notifyListeners();
+    httpHandler.deleteTodo(todoObject).then((_) => updateTodo());
   }
 
   void updateTodo() {
-    Future<Map<String, dynamic>> todoListJson = httpHandler.getTodos();
-    List<TodoObject> todoList = List<TodoObject>.from(todoListJson)
-    notifyListeners();
+    //print('starting update');
+    httpHandler.getTodos().then((jsonList) {
+      //print('doing update');
+      todoObjects = jsonList.map((i) => TodoObject.fromJson(i)).toList();
+      //print('did update');
+      notifyListeners();
+    });
+
+    //print('finished update');
+  }
+
+  void changeTodo(TodoObject todoObject) {
+    httpHandler.updateTodo(todoObject).then((_) => updateTodo());
   }
 
   void updateFilter(bool? newFilter) {
@@ -239,7 +246,7 @@ class TodoWidget extends StatelessWidget {
                         // är todoObject en referensvariabel??!?
                         // jag vet inte vad som händer, men dart gör tydligen det, så...
                         todoObject.completed = finished;
-                        state.updateTodo();
+                        state.changeTodo(todoObject);
                       }
                     },
                   ),
@@ -303,19 +310,41 @@ class HTTPHandler {
   final String apiKey = '?key=47a3ee96-cd50-4bac-9f54-e2c6719e7c65';
   final String apiServer = 'https://todoapp-api-pyq5q.ondigitalocean.app/todos';
 
-  Future<Map<String, dynamic>> getTodos() async {
+  Future<List> getTodos() async {
     http.Response response = await http.get(Uri.parse('$apiServer$apiKey'));
-    Map<String, dynamic> todoList = jsonDecode(response.body);
-    return todoList;
+
+    return jsonDecode(response.body);
   }
 
-  void addTodo(String todoText) {
-    http.post(Uri.parse('$apiServer$apiKey'), body: "");
+  Future<void> addTodo(String todoText) async {
+    var todoObject = {"id": "", "title": todoText, "done": false};
+    //print('made $todoObject');
+    var body = jsonEncode(todoObject);
+    //print('encoded $body');
+    await http.post(Uri.parse('$apiServer$apiKey'),
+        headers: {"Content-Type": "application/json"}, body: body);
+    //print('sent todo');
   }
 
-  void updateTodo(TodoObject todoObject) {}
+  Future<void> updateTodo(TodoObject todoObject) async {
+    String apiObject = '/${todoObject.todoID}';
+    // skapar nytt objekt eftersom använder gamla variabelnamn, rip
+    var todoJson = {
+      "id": todoObject.todoID,
+      "title": todoObject.todoText,
+      "done": todoObject.completed
+    };
+    //print('kom inte långt asså');
+    await http.put(Uri.parse('$apiServer$apiObject$apiKey'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(todoJson));
+  }
 
-  void deleteTodo(TodoObject todoObject) {}
+  Future<void> deleteTodo(TodoObject todoObject) async {
+    String apiObject = '/${todoObject.todoID}';
+    await http.delete(Uri.parse('$apiServer$apiObject$apiKey'));
+    //print('deleted object');
+  }
 }
 
 /*
